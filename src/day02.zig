@@ -7,6 +7,26 @@ const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
 const eql = std.mem.eql;
 const print = std.debug.print;
+const splitScaler = std.mem.splitScalar;
+const parseInt = std.fmt.parseInt;
+
+fn solution1(idRanges: []const u8) !i32 {
+    var rangeIter = splitScaler(u8, idRanges, ',');
+    var result: i32 = 0;
+
+    while (rangeIter.next()) |range| {
+        var lowHigh = splitScaler(u8, range, '-');
+        const low: i32 = try parseInt(i32, lowHigh.next(), u8).?;
+        const high: i32 = try parseInt(i32, lowHigh.next(), u8).? + 1;
+
+        for (low..high) |id| {
+            const idString = try std.fmt.allocPrint(allocator, "{dl}", .{id});
+            if (repeats(idString)) {
+                result += id;
+            }
+        }
+    }
+}
 
 fn repeats(string: []const u8) !bool {
     if (string.len < 2) {
@@ -74,4 +94,8 @@ test "Is Valid 1" {
 test "Repeats" {
     try std.testing.expectEqual(repeats("boo"), false);
     try std.testing.expectEqual(repeats("BB"), true);
+}
+
+test "Solution 1" {
+    try std.testing.expectEqual(solution1(test_input), 1227775554);
 }
