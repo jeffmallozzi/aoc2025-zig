@@ -5,36 +5,43 @@ const test_input = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,16
 
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
+const eql = std.mem.eql;
+const print = std.debug.print;
 
 fn is_valid_id(id: i32) !bool {
+    var id_copy = id;
+    print("Checking ID: {}\n", .{id_copy});
     var digits: ArrayList(i32) = .empty;
     defer digits.deinit(allocator);
 
-    while (id > 0) {
-        const digit = @rem(id, 10);
-        try digits.append(allocator, digit);
-        id -= digit;
-        if (id > 0) {
-            id = @divTrunc(id, 10);
+    print("Initializing ArrayList: {}\n", .{digits});
+
+    while (id_copy > 0) {
+        const digit = @rem(id_copy, 10);
+        print("Inserting digit: {}\n", .{digit});
+        try digits.insert(allocator, 0, digit);
+        //try digits.append(allocator, digit);
+        print("Digit list: {}\n", .{digits});
+        id_copy -= digit;
+        if (id_copy > 0) {
+            id_copy = @divTrunc(id_copy, 10);
         }
     }
 
-    if (@rem(digits.len, 2) == 1) {
+    print("Complete digit list: {}\n", .{digits});
+
+    //any odd length ID is valid
+    if (@rem(digits.items.len, 2) == 1) {
+        print("Found and odd number of digits, returning true\n", .{});
         return true;
     }
 
-    var a = 0;
-    var b = digits.len;
-
-    while (a < digits.len) {
-        if (digits[a] != digits[b]) {
-            return true;
-        }
-        a += 1;
-        b += 1;
+    const mid = digits.items.len / 2;
+    if (eql(i32, digits.items[0..mid], digits.items[mid..])) {
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 pub fn get_solutions() !Solutions {
