@@ -8,6 +8,19 @@ const allocator = std.heap.page_allocator;
 const eql = std.mem.eql;
 const print = std.debug.print;
 
+fn repeats(string: []const u8) !bool {
+    if (string.len < 2) {
+        return false;
+    }
+
+    const mid = string.len / 2;
+    if (eql(u8, string[0..mid], string[mid..])) {
+        return true;
+    }
+
+    return false;
+}
+
 fn is_valid_id(id: i32) !bool {
     var id_copy = id;
     print("Checking ID: {}\n", .{id_copy});
@@ -54,4 +67,11 @@ pub fn get_solutions() !Solutions {
 test "Is Valid 1" {
     try std.testing.expectEqual(is_valid_id(123), true);
     try std.testing.expectEqual(is_valid_id(1212), false);
+    try std.testing.expectEqual(is_valid_id(1), true);
+    //try std.testing.expectEqual(is_valid_id(0), true);
+}
+
+test "Repeats" {
+    try std.testing.expectEqual(repeats("boo"), false);
+    try std.testing.expectEqual(repeats("BB"), true);
 }
