@@ -16,7 +16,7 @@ fn solution1(idRanges: []const u8) !usize {
     var result: usize = 0;
 
     while (rangeIter.next()) |range| {
-        print("Checking range of IDs: {s}\n", .{range});
+        //print("Checking range of IDs: {s}\n", .{range});
         var lowHigh = splitScaler(u8, range, '-');
         const low: usize = try parseInt(usize, lowHigh.next().?, 10);
         const high: usize = try parseInt(usize, lowHigh.next().?, 10) + 1;
@@ -25,6 +25,30 @@ fn solution1(idRanges: []const u8) !usize {
             const idString = try std.fmt.allocPrint(allocator, "{d}", .{id});
             if (try repeats(idString)) {
                 result += id;
+            }
+        }
+    }
+
+    return result;
+}
+
+fn solution2(idRanges: []const u8) !usize {
+    var rangeIter = splitScaler(u8, idRanges, ',');
+    var result: usize = 0;
+
+    while (rangeIter.next()) |range| {
+        //print("Checking range of IDs: {s}\n", .{range});
+        var lowHigh = splitScaler(u8, range, '-');
+        const low: usize = try parseInt(usize, lowHigh.next().?, 10);
+        const high: usize = try parseInt(usize, lowHigh.next().?, 10) + 1;
+
+        for (low..high) |id| {
+            const idString = try std.fmt.allocPrint(allocator, "{d}", .{id});
+            for (2..idString.len + 1) |i| {
+                if (try repeats_n(idString, i)) {
+                    result += id;
+                    break;
+                }
             }
         }
     }
@@ -45,7 +69,7 @@ fn repeats(string: []const u8) !bool {
     return false;
 }
 
-fn repeats_n(string: []const u8, n: u8) !bool {
+fn repeats_n(string: []const u8, n: usize) !bool {
     if (@rem(string.len, n) != 0) {
         return false;
     }
@@ -64,7 +88,7 @@ fn repeats_n(string: []const u8, n: u8) !bool {
 pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
     solutions.sol1 = try solution1(inputTrimed);
-    solutions.sol2 = 0;
+    solutions.sol2 = try solution2(inputTrimed);
     return solutions;
 }
 
@@ -81,4 +105,8 @@ test "Repeats N" {
 
 test "Solution 1" {
     try std.testing.expectEqual(solution1(test_input), 1227775554);
+}
+
+test "Solution 2" {
+    try std.testing.expectEqual(solution2(test_input), 4174379265);
 }
