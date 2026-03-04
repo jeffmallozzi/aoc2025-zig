@@ -45,6 +45,22 @@ fn repeats(string: []const u8) !bool {
     return false;
 }
 
+fn repeats_n(string: []const u8, n: u8) !bool {
+    if (@rem(string.len, n) != 0) {
+        return false;
+    }
+
+    const width = string.len / n;
+
+    for (1..n) |i| {
+        if (!eql(u8, string[0..width], string[width * i .. width * (i + 1)])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
     solutions.sol1 = try solution1(inputTrimed);
@@ -55,6 +71,12 @@ pub fn get_solutions() !Solutions {
 test "Repeats" {
     try std.testing.expectEqual(repeats("boo"), false);
     try std.testing.expectEqual(repeats("BB"), true);
+}
+
+test "Repeats N" {
+    try std.testing.expectEqual(repeats_n("aaa", 3), true);
+    try std.testing.expectEqual(repeats_n("abcabcabcabc", 4), true);
+    try std.testing.expectEqual(repeats_n("hello", 3), false);
 }
 
 test "Solution 1" {
