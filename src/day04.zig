@@ -87,21 +87,27 @@ fn getNeighbors(location: Location) []?Location {
 }
 
 fn addSpot(wareHouse: *std.AutoHashMap(Location, Spot), location: Location, spot: Spot) !void {
-    try wareHouse.put(location, spot);
-    if (spot.contents == '@') {
+    //try wareHouse.put(location, spot);
+    var localspot = spot;
+    print("Adding spot at {d},{d}\n", .{ location.row, location.col });
+    if (localspot.contents == '@') {
         const neighbors = getNeighbors(location);
 
         for (neighbors) |neighbor| {
             if (neighbor != null) {
+                print("Found neighbor at {d},{d}\n", .{ neighbor.?.row, neighbor.?.col });
                 const val = wareHouse.getPtr(neighbor.?);
                 if (val) |loc| {
                     if (loc.contents == '@') {
+                        print("Found roll at location\n", .{});
                         loc.countNeighors += 1;
+                        localspot.countNeighors += 1;
                     }
                 }
             }
         }
     }
+    try wareHouse.put(location, localspot);
 }
 
 fn solution1(gridInput: []const u8) !usize {
@@ -120,7 +126,9 @@ fn solution1(gridInput: []const u8) !usize {
 
     var warehouseSpots = warehouse.valueIterator();
     while (warehouseSpots.next()) |spot| {
-        if ((spot.countNeighors < 4) & (spot.contents == '@')) {
+        print("Spot contains {s}, and has {d} adjacent rolls\n", .{ &.{spot.contents}, spot.countNeighors });
+        if ((spot.countNeighors < 4) and (spot.contents == '@')) {
+            print("Found accessable roll\n", .{});
             accessableRolls += 1;
         }
     }
