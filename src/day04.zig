@@ -38,9 +38,20 @@ const SouthEast: []const Direction = &.{ Direction.Right, Direction.Down };
 const South: []const Direction = &.{Direction.Down};
 const SouthWest: []const Direction = &.{ Direction.Down, Direction.Left };
 const West: []const Direction = &.{Direction.Left};
-const NorthWes: []const Direction = &.{ Direction.Left, Direction.Up };
+const NorthWest: []const Direction = &.{ Direction.Left, Direction.Up };
 
 const Location = struct { row: usize, col: usize };
+
+const Neighbors = struct {
+    north: ?Location = null,
+    northeast: ?Location = null,
+    east: ?Location = null,
+    southeast: ?Location = null,
+    south: ?Location = null,
+    southwest: ?Location = null,
+    west: ?Location = null,
+    northwest: ?Location = null,
+};
 
 const Spot = struct {
     contents: u8 = '.',
@@ -71,19 +82,19 @@ fn getNeighbor(location: Location, directions: []const Direction) !Location {
     return Location{ .row = row, .col = col };
 }
 
-fn getNeighbors(location: Location) []?Location {
-    var neighbors: [8]?Location = undefined;
+fn getNeighbors(location: Location) Neighbors {
+    var neighbors: Neighbors = .{};
 
-    neighbors[0] = getNeighbor(location, North) catch null;
-    neighbors[1] = getNeighbor(location, &[_]Direction{ Direction.Up, Direction.Right }) catch null;
-    neighbors[2] = getNeighbor(location, &[_]Direction{Direction.Right}) catch null;
-    neighbors[3] = getNeighbor(location, &[_]Direction{ Direction.Right, Direction.Down }) catch null;
-    neighbors[4] = getNeighbor(location, &[_]Direction{Direction.Down}) catch null;
-    neighbors[5] = getNeighbor(location, &[_]Direction{ Direction.Down, Direction.Left }) catch null;
-    neighbors[6] = getNeighbor(location, &[_]Direction{Direction.Left}) catch null;
-    neighbors[7] = getNeighbor(location, &[_]Direction{ Direction.Left, Direction.Up }) catch null;
+    neighbors.north = getNeighbor(location, North) catch null;
+    neighbors.northeast = getNeighbor(location, NorthEast) catch null;
+    neighbors.east = getNeighbor(location, East) catch null;
+    neighbors.southeast = getNeighbor(location, SouthEast) catch null;
+    neighbors.south = getNeighbor(location, South) catch null;
+    neighbors.southwest = getNeighbor(location, SouthWest) catch null;
+    neighbors.west = getNeighbor(location, West) catch null;
+    neighbors.northwest = getNeighbor(location, NorthWest) catch null;
 
-    return &neighbors;
+    return neighbors;
 }
 
 fn addSpot(wareHouse: *std.AutoHashMap(Location, Spot), location: Location, spot: Spot) !void {
@@ -143,10 +154,34 @@ pub fn get_solutions() !Solutions {
     return solutions;
 }
 
+test "Get Neighbor" {
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, North));
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, West));
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, NorthWest));
+    try std.testing.expectEqual(Location{.row = 0, .col = 1}, getNeighbor(Location{.row = 1, .col = 1}, North));
+    try std.testing.expectEqual(Location{.row = 2, .col = 1}, getNeighbor(Location{.row = 1, .col = 1}, South));
+    try std.testing.expectEqual(Location{.row = 1, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, East));
+    try std.testing.expectEqual(Location{.row = 1, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, West));
+    try std.testing.expectEqual(Location{.row = 0, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, NorthEast));
+    try std.testing.expectEqual(Location{.row = 2, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, SouthEast));
+    try std.testing.expectEqual(Location{.row = 0, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, NorthWest));
+    try std.testing.expectEqual(Location{.row = 2, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, SouthWest));
+}
+
+test "Get Neighbors" {
+    const output:Neighbors = .{
+        .north = null,
+        .northeast = null,
+        .east  = Location{.row = 0, .col = 1},
+        .southeast = Location{.row = 1, .col = 1},
+        .south = Location{.row = 1, .col = 0},
+        .southwest = null,
+        .west = null,
+        .northwest = null
+    };
+    try std.testing.expectEqual(output, getNeighbors(Location{.row = 0, .col = 0}));
+}
+
 test "Test Solution 1" {
     try std.testing.expectEqual(13, solution1(test_input));
 }
-
-// test "Test Solution 2" {
-//     try std.testing.expectEqual(3121910778619, solution(test_input, 12));
-// }
