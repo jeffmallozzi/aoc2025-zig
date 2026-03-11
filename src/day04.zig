@@ -51,6 +51,63 @@ const Neighbors = struct {
     southwest: ?Location = null,
     west: ?Location = null,
     northwest: ?Location = null,
+    index: usize = 0,
+    fn next(self: *Neighbors) ?Location {
+        while (self.index < 8) {
+            switch (self.index) {
+                0 => {
+                    self.index += 1;
+                    if (self.north) |_| {
+                        return self.north;
+                    }
+                },
+                1 => {
+                    self.index += 1;
+                    if (self.northeast != null) {
+                        return self.northeast;
+                    }
+                },
+                2 => {
+                    self.index += 1;
+                    if (self.east != null) {
+                        return self.east;
+                    }
+                },
+                3 => {
+                    self.index += 1;
+                    if (self.southeast != null) {
+                        return self.southeast;
+                    }
+                },
+                4 => {
+                    self.index += 1;
+                    if (self.south != null) {
+                        return self.south;
+                    }
+                },
+                5 => {
+                    self.index += 1;
+                    if (self.southwest != null) {
+                        return self.southwest;
+                    }
+                },
+                6 => {
+                    self.index += 1;
+                    if (self.west != null) {
+                        return self.west;
+                    }
+                },
+                7 => {
+                    self.index += 1;
+                    if (self.northwest != null) {
+                        return self.northwest;
+                    }
+                },
+                else => {return null;},
+            }
+        }
+        return null;
+    }
 };
 
 const Spot = struct {
@@ -100,22 +157,21 @@ fn getNeighbors(location: Location) Neighbors {
 fn addSpot(wareHouse: *std.AutoHashMap(Location, Spot), location: Location, spot: Spot) !void {
     //try wareHouse.put(location, spot);
     var localspot = spot;
-    print("Adding spot at {d},{d}\n", .{ location.row, location.col });
+    //print("Adding spot at {d},{d}\n", .{ location.row, location.col });
     if (localspot.contents == '@') {
-        const neighbors = getNeighbors(location);
+        var neighbors = getNeighbors(location);
 
-        for (neighbors) |neighbor| {
-            if (neighbor != null) {
-                print("Found neighbor at {d},{d}\n", .{ neighbor.?.row, neighbor.?.col });
-                const val = wareHouse.getPtr(neighbor.?);
-                if (val) |loc| {
-                    if (loc.contents == '@') {
-                        print("Found roll at location\n", .{});
-                        loc.countNeighors += 1;
-                        localspot.countNeighors += 1;
-                    }
+        while (neighbors.next()) |neighbor| {
+            //print("Found neighbor at {d},{d}\n", .{ neighbor.row, neighbor.col });
+            const val = wareHouse.getPtr(neighbor);
+            if (val) |loc| {
+                if (loc.contents == '@') {
+                    //print("Found roll at location\n", .{});
+                    loc.countNeighors += 1;
+                    localspot.countNeighors += 1;
                 }
             }
+
         }
     }
     try wareHouse.put(location, localspot);
@@ -137,9 +193,9 @@ fn solution1(gridInput: []const u8) !usize {
 
     var warehouseSpots = warehouse.valueIterator();
     while (warehouseSpots.next()) |spot| {
-        print("Spot contains {s}, and has {d} adjacent rolls\n", .{ &.{spot.contents}, spot.countNeighors });
+        //print("Spot contains {s}, and has {d} adjacent rolls\n", .{ &.{spot.contents}, spot.countNeighors });
         if ((spot.countNeighors < 4) and (spot.contents == '@')) {
-            print("Found accessable roll\n", .{});
+            //print("Found accessable roll\n", .{});
             accessableRolls += 1;
         }
     }
