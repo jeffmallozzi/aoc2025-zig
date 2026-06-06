@@ -103,7 +103,9 @@ const Neighbors = struct {
                         return self.northwest;
                     }
                 },
-                else => {return null;},
+                else => {
+                    return null;
+                },
             }
         }
         return null;
@@ -171,16 +173,14 @@ fn addSpot(wareHouse: *std.AutoHashMap(Location, Spot), location: Location, spot
                     localspot.countNeighors += 1;
                 }
             }
-
         }
     }
     try wareHouse.put(location, localspot);
 }
 
-fn solution1(gridInput: []const u8) !usize {
+fn buildWarehouse(gridInput: []const u8) !std.AutoHashMap(Location, Spot) {
     const trimedInput = std.mem.trim(u8, gridInput, "\n");
     var warehouse: std.AutoHashMap(Location, Spot) = .init(allocator);
-    var accessableRolls: usize = 0;
 
     var rowIndex: usize = 0;
     var rows = splitScaler(u8, trimedInput, '\n');
@@ -190,6 +190,12 @@ fn solution1(gridInput: []const u8) !usize {
         }
         rowIndex += 1;
     }
+
+    return warehouse;
+}
+
+fn solution1(warehouse: std.AutoHashMap(Location, Spot)) !usize {
+    var accessableRolls: usize = 0;
 
     var warehouseSpots = warehouse.valueIterator();
     while (warehouseSpots.next()) |spot| {
@@ -205,39 +211,32 @@ fn solution1(gridInput: []const u8) !usize {
 
 pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
-    solutions.sol1 = try solution1(input);
+    const warehouse = try buildWarehouse(input);
+    solutions.sol1 = try solution1(warehouse);
     solutions.sol2 = 0;
     return solutions;
 }
 
 test "Get Neighbor" {
-    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, North));
-    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, West));
-    try std.testing.expectError(error.Overflow, getNeighbor(Location{.row = 0, .col = 0}, NorthWest));
-    try std.testing.expectEqual(Location{.row = 0, .col = 1}, getNeighbor(Location{.row = 1, .col = 1}, North));
-    try std.testing.expectEqual(Location{.row = 2, .col = 1}, getNeighbor(Location{.row = 1, .col = 1}, South));
-    try std.testing.expectEqual(Location{.row = 1, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, East));
-    try std.testing.expectEqual(Location{.row = 1, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, West));
-    try std.testing.expectEqual(Location{.row = 0, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, NorthEast));
-    try std.testing.expectEqual(Location{.row = 2, .col = 2}, getNeighbor(Location{.row = 1, .col = 1}, SouthEast));
-    try std.testing.expectEqual(Location{.row = 0, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, NorthWest));
-    try std.testing.expectEqual(Location{.row = 2, .col = 0}, getNeighbor(Location{.row = 1, .col = 1}, SouthWest));
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{ .row = 0, .col = 0 }, North));
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{ .row = 0, .col = 0 }, West));
+    try std.testing.expectError(error.Overflow, getNeighbor(Location{ .row = 0, .col = 0 }, NorthWest));
+    try std.testing.expectEqual(Location{ .row = 0, .col = 1 }, getNeighbor(Location{ .row = 1, .col = 1 }, North));
+    try std.testing.expectEqual(Location{ .row = 2, .col = 1 }, getNeighbor(Location{ .row = 1, .col = 1 }, South));
+    try std.testing.expectEqual(Location{ .row = 1, .col = 2 }, getNeighbor(Location{ .row = 1, .col = 1 }, East));
+    try std.testing.expectEqual(Location{ .row = 1, .col = 0 }, getNeighbor(Location{ .row = 1, .col = 1 }, West));
+    try std.testing.expectEqual(Location{ .row = 0, .col = 2 }, getNeighbor(Location{ .row = 1, .col = 1 }, NorthEast));
+    try std.testing.expectEqual(Location{ .row = 2, .col = 2 }, getNeighbor(Location{ .row = 1, .col = 1 }, SouthEast));
+    try std.testing.expectEqual(Location{ .row = 0, .col = 0 }, getNeighbor(Location{ .row = 1, .col = 1 }, NorthWest));
+    try std.testing.expectEqual(Location{ .row = 2, .col = 0 }, getNeighbor(Location{ .row = 1, .col = 1 }, SouthWest));
 }
 
 test "Get Neighbors" {
-    const output:Neighbors = .{
-        .north = null,
-        .northeast = null,
-        .east  = Location{.row = 0, .col = 1},
-        .southeast = Location{.row = 1, .col = 1},
-        .south = Location{.row = 1, .col = 0},
-        .southwest = null,
-        .west = null,
-        .northwest = null
-    };
-    try std.testing.expectEqual(output, getNeighbors(Location{.row = 0, .col = 0}));
+    const output: Neighbors = .{ .north = null, .northeast = null, .east = Location{ .row = 0, .col = 1 }, .southeast = Location{ .row = 1, .col = 1 }, .south = Location{ .row = 1, .col = 0 }, .southwest = null, .west = null, .northwest = null };
+    try std.testing.expectEqual(output, getNeighbors(Location{ .row = 0, .col = 0 }));
 }
 
 test "Test Solution 1" {
-    try std.testing.expectEqual(13, solution1(test_input));
+    const warehouse = try buildWarehouse(test_input);
+    try std.testing.expectEqual(13, solution1(warehouse));
 }
