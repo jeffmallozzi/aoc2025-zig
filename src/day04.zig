@@ -197,10 +197,10 @@ fn buildWarehouse(gridInput: []const u8) !std.AutoHashMap(Location, Spot) {
 fn solution1(warehouse: std.AutoHashMap(Location, Spot)) !usize {
     var accessableRolls: usize = 0;
 
-    var warehouseSpots = warehouse.valueIterator();
+    var warehouseSpots = warehouse.iterator();
     while (warehouseSpots.next()) |spot| {
         //print("Spot contains {s}, and has {d} adjacent rolls\n", .{ &.{spot.contents}, spot.countNeighors });
-        if ((spot.countNeighors < 4) and (spot.contents == '@')) {
+        if ((spot.value_ptr.countNeighors < 4) and (spot.value_ptr.contents == '@')) {
             //print("Found accessable roll\n", .{});
             accessableRolls += 1;
         }
