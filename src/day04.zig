@@ -194,26 +194,52 @@ fn buildWarehouse(gridInput: []const u8) !std.AutoHashMap(Location, Spot) {
     return warehouse;
 }
 
-fn solution1(warehouse: std.AutoHashMap(Location, Spot)) !usize {
-    var accessableRolls: usize = 0;
+fn getAccessableRolls(warehouse: *std.AutoHashMap(Location, Spot)) !std.ArrayList(Location) {
+    //var accessableRolls: usize = 0;
+    var accessableRolls: std.ArrayList(Location) = .empty;
 
     var warehouseSpots = warehouse.iterator();
     while (warehouseSpots.next()) |spot| {
         //print("Spot contains {s}, and has {d} adjacent rolls\n", .{ &.{spot.contents}, spot.countNeighors });
         if ((spot.value_ptr.countNeighors < 4) and (spot.value_ptr.contents == '@')) {
             //print("Found accessable roll\n", .{});
-            accessableRolls += 1;
+            //accessableRolls += 1;
+            try accessableRolls.append(allocator, spot.key_ptr.*);
         }
     }
 
     return accessableRolls;
 }
 
+fn removeAccessableRolls(warehouse: *std.AutoHashMap(Location, Spot), locations: std.ArrayList(Location)) void {
+    for (locations.items) |location| {
+        var spot = warehouse.getPtr(location);
+        spot.?.contents = '.';
+        spot.?.countNeighors = 0;
+        var neighbors = getNeighbors(location);
+        while (neighbors.next()) |neighbor| {
+            const nSpot = warehouse.getPtr(neighbor);
+            if (nSpot) |loc| {
+                if (loc.contents == '@') {
+                    loc.countNeighors -= 1;
+                }
+            }
+        }
+    }
+}
+
 pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
-    const warehouse = try buildWarehouse(input);
-    solutions.sol1 = try solution1(warehouse);
-    solutions.sol2 = 0;
+    var warehouse = try buildWarehouse(input);
+    var accessableRolls = try getAccessableRolls(&warehouse);
+    solutions.sol1 = accessableRolls.items.len;
+    var sol2: usize = 0;
+    while (accessableRolls.items.len > 0) {
+        sol2 += accessableRolls.items.len;
+        removeAccessableRolls(&warehouse, accessableRolls);
+        accessableRolls = try getAccessableRolls(&warehouse);
+    }
+    solutions.sol2 = sol2;
     return solutions;
 }
 
@@ -237,6 +263,19 @@ test "Get Neighbors" {
 }
 
 test "Test Solution 1" {
-    const warehouse = try buildWarehouse(test_input);
-    try std.testing.expectEqual(13, solution1(warehouse));
+    var warehouse = try buildWarehouse(test_input);
+    const sol1 = try getAccessableRolls(&warehouse);
+    try std.testing.expectEqual(13, sol1.items.len);
+}
+
+test "Test Solution 2" {
+    var warehouse = try buildWarehouse(test_input);
+    var accessableRolls = try getAccessableRolls(&warehouse);
+    var sol2: usize = 0;
+    while (accessableRolls.items.len > 0) {
+        sol2 += accessableRolls.items.len;
+        removeAccessableRolls(&warehouse, accessableRolls);
+        accessableRolls = try getAccessableRolls(&warehouse);
+    }
+    try std.testing.expectEqual(43, sol2);
 }
