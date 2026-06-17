@@ -1,6 +1,6 @@
 const std = @import("std");
 const aoc2025_zig = @import("aoc2025_zig");
-const days = @import("day04.zig");
+const days = @import("day05.zig");
 
 pub fn main() !void {
     const solutions = try days.get_solutions();

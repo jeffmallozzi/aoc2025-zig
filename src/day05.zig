@@ -11,6 +11,8 @@ const pow = std.math.pow;
 
 const Solutions = struct { sol1: usize = 0, sol2: usize = 0 };
 const puzzel_input = @embedFile("input/day05");
+const trimed_input = std.mem.trim(u8, puzzel_input, "\n");
+
 const test_input =
     \\3-5
     \\10-14
@@ -29,7 +31,7 @@ const Range = struct {
     start: usize,
     end: usize,
 
-    fn fresh(self: Range, value: usize) bool {
+    fn containes(self: Range, value: usize) bool {
         return value >= self.start and value <= self.end;
     }
 };
@@ -37,6 +39,19 @@ const Range = struct {
 const Database = struct {
     fresh_ingredients: ArrayList(Range),
     available_ingredients: ArrayList(usize),
+
+    fn count_fresh_ingredients(self: Database) usize {
+        var count: usize = 0;
+        for (self.available_ingredients.items) |ingredient| {
+            for (self.fresh_ingredients.items) |range| {
+                if (range.containes(ingredient)) {
+                    count += 1;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
 };
 
 pub fn parse_input(input: []const u8) !Database {
@@ -63,7 +78,8 @@ pub fn parse_input(input: []const u8) !Database {
 
 pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
-    solutions.sol1 = 0;
+    const db = try parse_input(trimed_input);
+    solutions.sol1 = db.count_fresh_ingredients();
     solutions.sol2 = 0;
     return solutions;
 }
@@ -72,4 +88,17 @@ test "parse_input" {
     const db = try parse_input(test_input);
     try std.testing.expectEqual(4, db.fresh_ingredients.items.len);
     try std.testing.expectEqual(6, db.available_ingredients.items.len);
+}
+
+test "range" {
+    const range: Range = .{ .start = 8, .end = 34 };
+    try std.testing.expect(range.containes(8));
+    try std.testing.expect(range.containes(10));
+    try std.testing.expect(!range.containes(35));
+    try std.testing.expect(range.containes(34));
+}
+
+test "sample_input" {
+    const db = try parse_input(test_input);
+    try std.testing.expectEqual(3, db.count_fresh_ingredients());
 }
