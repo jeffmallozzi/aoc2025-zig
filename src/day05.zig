@@ -27,6 +27,21 @@ const test_input =
     \\32
 ;
 
+const Range_Point_Type = enum { Start, End };
+
+const Range_Point = struct {
+    index: usize,
+    type: Range_Point_Type,
+
+    fn lessThan(context: void, a: Range_Point, b: Range_Point) bool {
+        _ = context;
+        if (a.index == b.index) {
+            return a.type == Range_Point_Type.Start and b.type == Range_Point_Type.End;
+        }
+        return a.index < b.index;
+    }
+};
+
 const Range = struct {
     start: usize,
     end: usize,
@@ -34,11 +49,103 @@ const Range = struct {
     fn containes(self: Range, value: usize) bool {
         return value >= self.start and value <= self.end;
     }
+
+    fn overlap(self: Range, other: Range) ?Range {
+
+        // no overlap
+        if (self.end < other.start or other.end < self.start) {
+            return null;
+        }
+
+        // self fully overlaps other
+        if (self.start <= other.start and self.end >= other.end) {
+            return other;
+        }
+
+        // other fully overlaps self
+        if (self.start >= other.start and self.end <= other.end) {
+            return self;
+        }
+
+        // self range begins before other range
+        if (self.start < other.start) {
+            return .{ other.start, self.end };
+        }
+
+        // other range begins before
+        return .{ self.start, other.end };
+    }
 };
 
 const Database = struct {
     fresh_ingredients: ArrayList(Range),
+    fresh_ranges: ArrayList(Range_Point),
     available_ingredients: ArrayList(usize),
+
+    fn add_range(self: *Database, start: usize, end: usize) !void {
+        const start_point = Range_Point{
+            .index = start,
+            .type = Range_Point_Type.Start,
+        };
+        const end_point = Range_Point{
+            .index = end,
+            .type = Range_Point_Type.End,
+        };
+        try self.fresh_ranges.append(allocator, start_point);
+        try self.fresh_ranges.append(allocator, end_point);
+        std.mem.sort(Range_Point, self.fresh_ranges.items, {}, Range_Point.lessThan);
+
+        var fresh: usize = 0;
+        var indexs_to_trim = ArrayList(usize).empty;
+
+        for (self.fresh_ranges.items, 0..) |range_item, i| {
+            switch (range_item.type) {
+                Range_Point_Type.Start => {
+                    fresh += 1;
+                    if (fresh > 1) {
+                        try indexs_to_trim.append(allocator, i);
+                    }
+                },
+                Range_Point_Type.End => {
+                    fresh -= 1;
+                    if (fresh > 0) {
+                        try indexs_to_trim.append(allocator, i);
+                    }
+                },
+            }
+        }
+
+        std.mem.reverse(usize, indexs_to_trim.items);
+
+        for (indexs_to_trim.items) |i| {
+            _ = self.fresh_ranges.orderedRemove(i);
+        }
+    }
+
+    fn is_fresh(self: Database, ingredient: usize) bool {
+        var low = 0;
+        var high = 0;
+        var fresh: bool = false;
+
+        for (self.fresh_ranges.items) |range_point| {
+            if (ingredient == range_point.index) return true;
+
+            low = high;
+            high = range_point.index;
+
+            if (low < ingredient and ingredient < high) {
+                return fresh;
+            }
+
+            if (range_point.type == Range_Point_Type.Start) {
+                fresh = true;
+            } else {
+                fresh = false;
+            }
+        }
+
+        return fresh;
+    }
 
     fn count_fresh_ingredients(self: Database) usize {
         var count: usize = 0;
@@ -57,6 +164,7 @@ const Database = struct {
 pub fn parse_input(input: []const u8) !Database {
     var db = Database{
         .fresh_ingredients = ArrayList(Range).empty,
+        .fresh_ranges = ArrayList(Range_Point).empty,
         .available_ingredients = ArrayList(usize).empty,
     };
 
@@ -67,6 +175,7 @@ pub fn parse_input(input: []const u8) !Database {
         const start = try parseInt(usize, range_values.?.@"0", 10);
         const end = try parseInt(usize, range_values.?.@"1", 10);
         try db.fresh_ingredients.append(allocator, Range{ .start = start, .end = end });
+        try db.add_range(start, end);
     }
     while (lines.next()) |line| {
         const indgredient = try parseInt(usize, line, 10);
@@ -88,6 +197,7 @@ test "parse_input" {
     const db = try parse_input(test_input);
     try std.testing.expectEqual(4, db.fresh_ingredients.items.len);
     try std.testing.expectEqual(6, db.available_ingredients.items.len);
+    try std.testing.expectEqual(4, db.fresh_ranges.items.len);
 }
 
 test "range" {
@@ -101,4 +211,22 @@ test "range" {
 test "sample_input" {
     const db = try parse_input(test_input);
     try std.testing.expectEqual(3, db.count_fresh_ingredients());
+}
+
+test "range_point" {
+    const a = Range_Point{
+        .index = 4,
+        .type = Range_Point_Type.Start,
+    };
+    const b = Range_Point{
+        .index = 7,
+        .type = Range_Point_Type.End,
+    };
+    const c = Range_Point{
+        .index = 7,
+        .type = Range_Point_Type.Start,
+    };
+    try std.testing.expect(Range_Point.lessThan({}, a, b));
+    try std.testing.expect(Range_Point.lessThan({}, c, b));
+    try std.testing.expect(!Range_Point.lessThan({}, b, c));
 }
