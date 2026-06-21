@@ -1,13 +1,8 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
-const eql = std.mem.eql;
-const indexOfMax = std.mem.indexOfMax;
-const max = std.mem.max;
-const print = std.debug.print;
 const splitScaler = std.mem.splitScalar;
 const parseInt = std.fmt.parseInt;
-const pow = std.math.pow;
 
 const Solutions = struct { sol1: usize = 0, sol2: usize = 0 };
 const puzzel_input = @embedFile("input/day05");
@@ -42,43 +37,7 @@ const Range_Point = struct {
     }
 };
 
-const Range = struct {
-    start: usize,
-    end: usize,
-
-    fn containes(self: Range, value: usize) bool {
-        return value >= self.start and value <= self.end;
-    }
-
-    fn overlap(self: Range, other: Range) ?Range {
-
-        // no overlap
-        if (self.end < other.start or other.end < self.start) {
-            return null;
-        }
-
-        // self fully overlaps other
-        if (self.start <= other.start and self.end >= other.end) {
-            return other;
-        }
-
-        // other fully overlaps self
-        if (self.start >= other.start and self.end <= other.end) {
-            return self;
-        }
-
-        // self range begins before other range
-        if (self.start < other.start) {
-            return .{ other.start, self.end };
-        }
-
-        // other range begins before
-        return .{ self.start, other.end };
-    }
-};
-
 const Database = struct {
-    fresh_ingredients: ArrayList(Range),
     fresh_ranges: ArrayList(Range_Point),
     available_ingredients: ArrayList(usize),
 
@@ -123,8 +82,8 @@ const Database = struct {
     }
 
     fn is_fresh(self: Database, ingredient: usize) bool {
-        var low = 0;
-        var high = 0;
+        var low: usize = 0;
+        var high: usize = 0;
         var fresh: bool = false;
 
         for (self.fresh_ranges.items) |range_point| {
@@ -150,20 +109,40 @@ const Database = struct {
     fn count_fresh_ingredients(self: Database) usize {
         var count: usize = 0;
         for (self.available_ingredients.items) |ingredient| {
-            for (self.fresh_ingredients.items) |range| {
-                if (range.containes(ingredient)) {
-                    count += 1;
-                    break;
-                }
+            if (self.is_fresh(ingredient)) {
+                count += 1;
             }
         }
         return count;
+    }
+
+    fn fresh_capacity(self: Database) usize {
+        var low: usize = 0;
+        var high: usize = 0;
+        var fresh: bool = false;
+        var capacity: usize = 0;
+
+        for (self.fresh_ranges.items) |range_point| {
+            low = high;
+            high = range_point.index;
+
+            if (fresh) {
+                capacity += ((high - low) + 1);
+            }
+
+            if (range_point.type == Range_Point_Type.Start) {
+                fresh = true;
+            } else {
+                fresh = false;
+            }
+        }
+
+        return capacity;
     }
 };
 
 pub fn parse_input(input: []const u8) !Database {
     var db = Database{
-        .fresh_ingredients = ArrayList(Range).empty,
         .fresh_ranges = ArrayList(Range_Point).empty,
         .available_ingredients = ArrayList(usize).empty,
     };
@@ -174,7 +153,6 @@ pub fn parse_input(input: []const u8) !Database {
         const range_values = std.mem.cut(u8, line, "-");
         const start = try parseInt(usize, range_values.?.@"0", 10);
         const end = try parseInt(usize, range_values.?.@"1", 10);
-        try db.fresh_ingredients.append(allocator, Range{ .start = start, .end = end });
         try db.add_range(start, end);
     }
     while (lines.next()) |line| {
@@ -189,28 +167,22 @@ pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
     const db = try parse_input(trimed_input);
     solutions.sol1 = db.count_fresh_ingredients();
-    solutions.sol2 = 0;
+    solutions.sol2 = db.fresh_capacity();
     return solutions;
 }
 
 test "parse_input" {
     const db = try parse_input(test_input);
-    try std.testing.expectEqual(4, db.fresh_ingredients.items.len);
     try std.testing.expectEqual(6, db.available_ingredients.items.len);
     try std.testing.expectEqual(4, db.fresh_ranges.items.len);
 }
 
-test "range" {
-    const range: Range = .{ .start = 8, .end = 34 };
-    try std.testing.expect(range.containes(8));
-    try std.testing.expect(range.containes(10));
-    try std.testing.expect(!range.containes(35));
-    try std.testing.expect(range.containes(34));
-}
-
 test "sample_input" {
     const db = try parse_input(test_input);
+    // Part 1
     try std.testing.expectEqual(3, db.count_fresh_ingredients());
+    // Part 2
+    try std.testing.expectEqual(14, db.fresh_capacity());
 }
 
 test "range_point" {
@@ -229,4 +201,14 @@ test "range_point" {
     try std.testing.expect(Range_Point.lessThan({}, a, b));
     try std.testing.expect(Range_Point.lessThan({}, c, b));
     try std.testing.expect(!Range_Point.lessThan({}, b, c));
+}
+
+test "is_fresh" {
+    const db = try parse_input(test_input);
+    try std.testing.expect(!db.is_fresh(1));
+    try std.testing.expect(db.is_fresh(5));
+    try std.testing.expect(!db.is_fresh(8));
+    try std.testing.expect(db.is_fresh(11));
+    try std.testing.expect(db.is_fresh(17));
+    try std.testing.expect(!db.is_fresh(32));
 }
