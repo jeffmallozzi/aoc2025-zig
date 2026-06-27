@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
 const eql = std.mem.eql;
@@ -11,12 +12,12 @@ const pow = std.math.pow;
 
 const Solutions = struct { sol1: usize = 0, sol2: usize = 0 };
 const puzzle_input = @embedFile("input/day06");
-const trimed_input = std.mem.trim(u8, puzzle_input, "\n ");
+const trimed_input = std.mem.trim(u8, puzzle_input, "\n");
 const test_input =
-    \\123 328  51 64
-    \\ 45 64  387 23
+    \\123 328  51 64 
+    \\ 45 64  387 23 
     \\  6 98  215 314
-    \\*   +   *   +
+    \\*   +   *   +  
 ;
 
 const Operator = enum { Star, Plus };
@@ -73,6 +74,90 @@ fn parse_input(input: []const u8) !ArrayList(Problem) {
     return problems;
 }
 
+const VirtSliceError = error{
+    NonRectangularBuffer,
+};
+
+pub fn VirtSliceIterator(comptime T: type) type {
+    return struct {
+        buffer: [][]const T,
+        index: ?usize,
+
+        const Self = @This();
+
+        /// Returns a slice of the first field.
+        /// Call this only to get the first field and then use `next` to get all subsequent fields.
+        /// Asserts that iteration has not begun.
+        pub fn first(self: *Self) []const T {
+            assert(self.index.? == 0);
+            return self.next().?;
+        }
+
+        pub fn next(self: *Self) ?[]const T {
+            const index = self.index orelse return null;
+
+            var return_buff: ArrayList(T) = .empty;
+            for (self.buffer) |line| {
+                return_buff.append(allocator, line[index]) catch return null;
+            }
+            self.index.? += 1;
+            if (self.index.? >= self.buffer[0].len) {
+                self.index = null;
+            }
+            return return_buff.items;
+        }
+
+        pub fn reset(self: *Self) void {
+            self.index = 0;
+        }
+    };
+}
+
+pub fn VirtSlice(comptime T: type, buffer: [][]const T) VirtSliceIterator(T) {
+    const width = buffer[0].len;
+    for (buffer[1..]) |line| {
+        assert(line.len == width);
+    }
+    return .{
+        .index = 0,
+        .buffer = buffer,
+    };
+}
+
+fn parse_input_part_2(input: []const u8) !ArrayList(Problem) {
+    var problems: ArrayList(Problem) = .empty;
+    var lines_iter = std.mem.splitScalar(u8, input, '\n');
+    var lines: ArrayList([]const u8) = .empty;
+    while (lines_iter.next()) |line| {
+        try lines.append(allocator, line);
+    }
+    var virt_slices = VirtSlice(u8, lines.items);
+
+    var temp_problem: Problem = .{ .numbers = .empty, .operator = undefined };
+    while (virt_slices.next()) |slice| {
+        if (std.mem.allEqual(u8, slice, ' ')) {
+            try problems.append(allocator, temp_problem);
+            temp_problem.numbers = .empty;
+            continue;
+        }
+
+        const len = slice.len;
+        const opp = slice[len - 1];
+        const num_str = slice[0..(len - 1)];
+        const num_stir_trimmed = std.mem.trim(u8, num_str, " ");
+
+        if (opp != ' ') {
+            temp_problem.operator = if (opp == '+') Operator.Plus else Operator.Star;
+        }
+
+        const num = try parseInt(usize, num_stir_trimmed, 10);
+        try temp_problem.numbers.append(allocator, num);
+    }
+    try problems.append(allocator, temp_problem);
+
+    return problems;
+}
+
 pub fn sum_problems(problems: ArrayList(Problem)) usize {
     var result: usize = 0;
     for (problems.items) |problem| {
@@ -85,7 +170,8 @@ pub fn get_solutions() !Solutions {
     var solutions = Solutions{};
     const problems = try parse_input(trimed_input);
     solutions.sol1 = sum_problems(problems);
-    solutions.sol2 = 0;
+    const problems2 = try parse_input_part_2(trimed_input);
+    solutions.sol2 = sum_problems(problems2);
     return solutions;
 }
 
@@ -108,4 +194,24 @@ test "problem" {
 test "Part_one" {
     const problems = try parse_input(test_input);
     try std.testing.expectEqual(4277556, sum_problems(problems));
+}
+
+test "Part_two" {
+    const problems = try parse_input_part_2(test_input);
+    try std.testing.expectEqual(3263827, sum_problems(problems));
+}
+
+test "Virt_Slice_Iter" {
+    const line1: []const usize = &.{ 1, 2, 3 };
+    const line2: []const usize = &.{ 4, 5, 6 };
+    var test_buff: ArrayList([]const usize) = .empty;
+    try test_buff.append(allocator, line1);
+    try test_buff.append(allocator, line2);
+    var test_iter = VirtSlice(usize, test_buff.items);
+    const expect1: []const usize = &.{ 1, 4 };
+    const expect2: []const usize = &.{ 2, 5 };
+    const expect3: []const usize = &.{ 3, 6 };
+    try std.testing.expectEqualSlices(usize, expect1, test_iter.next().?);
+    try std.testing.expectEqualSlices(usize, expect2, test_iter.next().?);
+    try std.testing.expectEqualSlices(usize, expect3, test_iter.next().?);
 }
